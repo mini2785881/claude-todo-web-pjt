@@ -7,6 +7,8 @@
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
+  <script>document.body.classList.toggle("dark-mode", localStorage.getItem("theme") === "dark");</script>
+
   <div class="auth-wrap" id="auth-view">
     <div class="auth-card">
       <h1 class="auth-title">오늘의 할 일</h1>
@@ -36,6 +38,11 @@
   <div class="app" id="app-view" hidden>
     <header class="app-header">
       <div class="user-bar">
+        <button type="button" id="theme-toggle" class="theme-toggle" aria-pressed="false" aria-label="다크모드로 전환">
+          <span class="theme-toggle-track">
+            <span class="theme-toggle-thumb" aria-hidden="true"></span>
+          </span>
+        </button>
         <span id="current-user-label"></span>
         <button type="button" id="logout-btn">로그아웃</button>
       </div>
@@ -73,5 +80,6 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
   <script src="auth.js"></script>
   <script src="app.js"></script>
+  <script src="theme.js"></script>
 </body>
 </html>
