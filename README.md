@@ -10,9 +10,9 @@
 
 | 파일 | 역할 |
 |---|---|
-| `index.html` | 화면 구조 (헤더/입력폼/필터바/할 일 목록) |
+| `index.html` | 화면 구조 (헤더/입력폼/필터바/할 일 목록), Supabase JS SDK 로드 |
 | `style.css` | 카드형 레이아웃, 카테고리 색상, hover/transition, 반응형 스타일 |
-| `app.js` | 할 일 데이터 관리, 렌더링, 이벤트 처리, localStorage 저장/로드 |
+| `app.js` | 할 일 데이터 관리, 렌더링, 이벤트 처리, Supabase 연동 저장/로드 |
 
 ## 사용법
 
@@ -25,9 +25,11 @@
 
 ## 데이터 저장
 
-- 브라우저 `localStorage`의 `todos` 키에 JSON 배열로 저장됩니다.
-- 할 일이 추가/수정/삭제/완료 토글될 때마다 자동 저장되며, 새로고침해도 데이터가 유지됩니다.
-- 데이터 모델: `{ id, text, category, completed, createdAt }`
+- Supabase 프로젝트의 `todo_tbl` 테이블에 저장됩니다 (더 이상 `localStorage`를 사용하지 않습니다).
+- 할 일이 추가/수정/삭제/완료 토글될 때마다 Supabase에 즉시 반영되며, 다른 브라우저/기기에서 열어도 동일한 데이터가 보입니다.
+- 테이블 스키마: `id (uuid, PK)`, `text (text)`, `category (text)`, `completed (boolean)`, `created_at (timestamptz)`
+- 클라이언트는 `@supabase/supabase-js` (CDN)로 프로젝트 URL과 anon(publishable) 키를 사용해 REST 호출을 수행합니다. anon 키는 공개되어도 안전하도록 설계된 키이며, 실제 접근 제어는 테이블의 Row Level Security(RLS) 정책으로 관리됩니다.
+- 현재는 개인용 단일 사용자 앱이므로 `anon` 역할에 전체 CRUD를 허용하는 RLS 정책이 적용되어 있습니다. 여러 사용자가 공유하는 환경으로 확장한다면 인증(Auth)과 사용자별 정책을 추가해야 합니다.
 
 ## 최종 점검 결과
 

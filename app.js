@@ -7,69 +7,105 @@ document.addEventListener("DOMContentLoaded", () => {
   const progressFill = document.getElementById("progress-fill");
   const progressText = document.getElementById("progress-text");
 
-  const STORAGE_KEY = "todos";
+  const SUPABASE_URL = "https://vjrxwlgmfiqizzadotly.supabase.co";
+  const SUPABASE_ANON_KEY = "sb_publishable_ScDXv9MnyILCnV73TePOxA_YKh6b2C8";
+  const TABLE_NAME = "todo_tbl";
 
-  let todos = loadTodos();
+  const db = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+  let todos = [];
   let currentFilter = "전체";
 
-  function loadTodos() {
-    try {
-      const raw = localStorage.getItem(STORAGE_KEY);
-      return raw ? JSON.parse(raw) : [];
-    } catch (err) {
-      console.error("failed to load todos from localStorage", err);
+  async function loadTodos() {
+    const { data, error } = await db
+      .from(TABLE_NAME)
+      .select("*")
+      .order("created_at", { ascending: true });
+
+    if (error) {
+      console.error("failed to load todos from supabase", error);
+      alert("할 일 목록을 불러오지 못했습니다.");
       return [];
     }
+
+    return data;
   }
 
-  function saveTodos() {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(todos));
-  }
-
-  function createId() {
-    return Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
-  }
-
-  function addTodo() {
+  async function addTodo() {
     const text = todoInput.value.trim();
     if (!text) return;
 
-    todos.push({
-      id: createId(),
-      text,
-      category: categorySelect.value || "개인",
-      completed: false,
-      createdAt: new Date().toISOString(),
-    });
+    const { data, error } = await db
+      .from(TABLE_NAME)
+      .insert({
+        text,
+        category: categorySelect.value || "개인",
+        completed: false,
+      })
+      .select()
+      .single();
 
+    if (error) {
+      console.error("failed to add todo", error);
+      alert("할 일을 추가하지 못했습니다.");
+      return;
+    }
+
+    todos.push(data);
     todoInput.value = "";
     todoInput.focus();
-    saveTodos();
     render();
   }
 
-  function saveEdit(id, newText) {
+  async function saveEdit(id, newText) {
     const trimmed = newText.trim();
     if (!trimmed) return;
+
+    const { error } = await db.from(TABLE_NAME).update({ text: trimmed }).eq("id", id);
+
+    if (error) {
+      console.error("failed to update todo", error);
+      alert("할 일을 수정하지 못했습니다.");
+      return;
+    }
+
     const todo = todos.find((t) => t.id === id);
-    if (!todo) return;
-    todo.text = trimmed;
-    saveTodos();
+    if (todo) todo.text = trimmed;
     render();
   }
 
-  function deleteTodo(id) {
+  async function deleteTodo(id) {
     if (!confirm("이 할 일을 삭제할까요?")) return;
+
+    const { error } = await db.from(TABLE_NAME).delete().eq("id", id);
+
+    if (error) {
+      console.error("failed to delete todo", error);
+      alert("할 일을 삭제하지 못했습니다.");
+      return;
+    }
+
     todos = todos.filter((t) => t.id !== id);
-    saveTodos();
     render();
   }
 
-  function toggleTodo(id) {
+  async function toggleTodo(id) {
     const todo = todos.find((t) => t.id === id);
     if (!todo) return;
-    todo.completed = !todo.completed;
-    saveTodos();
+
+    const nextCompleted = !todo.completed;
+    const { error } = await db
+      .from(TABLE_NAME)
+      .update({ completed: nextCompleted })
+      .eq("id", id);
+
+    if (error) {
+      console.error("failed to toggle todo", error);
+      alert("완료 상태를 변경하지 못했습니다.");
+      return;
+    }
+
+    todo.completed = nextCompleted;
     render();
   }
 
@@ -201,5 +237,9 @@ document.addEventListener("DOMContentLoaded", () => {
     renderTodos();
   });
 
-  render();
+  (async function init() {
+    progressText.textContent = "불러오는 중...";
+    todos = await loadTodos();
+    render();
+  })();
 });
