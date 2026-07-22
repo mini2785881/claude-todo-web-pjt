@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>오늘의 할 일</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="app">
+    <header class="app-header">
+      <h1>오늘의 할 일</h1>
+      <div class="progress-area">
+        <div class="progress-bar">
+          <div id="progress-fill" class="progress-fill"></div>
+        </div>
+        <span id="progress-text" class="progress-text">0%</span>
+      </div>
+    </header>
+
+    <section class="input-area">
+      <input type="text" id="todo-input" placeholder="할 일을 입력하세요" autocomplete="off">
+      <select id="category-select">
+        <option value="개인">개인</option>
+        <option value="공부">공부</option>
+        <option value="업무">업무</option>
+        <option value="취미">취미</option>
+      </select>
+      <button type="button" id="add-btn">추가</button>
+    </section>
+
+    <nav class="filter-area" id="filter-area">
+      <button class="filter-btn active" data-filter="전체">전체</button>
+      <button class="filter-btn" data-filter="개인">개인</button>
+      <button class="filter-btn" data-filter="공부">공부</button>
+      <button class="filter-btn" data-filter="업무">업무</button>
+      <button class="filter-btn" data-filter="취미">취미</button>
+    </nav>
+
+    <ul id="todo-list"></ul>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
