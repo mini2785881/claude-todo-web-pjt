@@ -6,20 +6,21 @@ document.addEventListener("DOMContentLoaded", () => {
   const filterArea = document.getElementById("filter-area");
   const progressFill = document.getElementById("progress-fill");
   const progressText = document.getElementById("progress-text");
+  const appView = document.getElementById("app-view");
 
-  const SUPABASE_URL = "https://vjrxwlgmfiqizzadotly.supabase.co";
-  const SUPABASE_ANON_KEY = "sb_publishable_ScDXv9MnyILCnV73TePOxA_YKh6b2C8";
   const TABLE_NAME = "todo_tbl";
 
-  const db = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+  const db = window.sb;
 
   let todos = [];
   let currentFilter = "전체";
+  let currentUserId = null;
 
   async function loadTodos() {
     const { data, error } = await db
       .from(TABLE_NAME)
       .select("*")
+      .eq("user_id", currentUserId)
       .order("created_at", { ascending: true });
 
     if (error) {
@@ -38,6 +39,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const { data, error } = await db
       .from(TABLE_NAME)
       .insert({
+        user_id: currentUserId,
         text,
         category: categorySelect.value || "개인",
         completed: false,
@@ -237,9 +239,19 @@ document.addEventListener("DOMContentLoaded", () => {
     renderTodos();
   });
 
-  (async function init() {
+  async function init(user) {
+    currentUserId = user.id;
     progressText.textContent = "불러오는 중...";
     todos = await loadTodos();
     render();
+  }
+
+  window.addEventListener("auth:login", (e) => init(e.detail.user));
+
+  (async function bootstrap() {
+    const { data } = await db.auth.getSession();
+    if (data.session?.user && appView && !appView.hidden) {
+      init(data.session.user);
+    }
   })();
 });

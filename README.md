@@ -10,9 +10,19 @@
 
 | 파일 | 역할 |
 |---|---|
-| `index.html` | 화면 구조 (헤더/입력폼/필터바/할 일 목록), Supabase JS SDK 로드 |
-| `style.css` | 카드형 레이아웃, 카테고리 색상, hover/transition, 반응형 스타일 |
-| `app.js` | 할 일 데이터 관리, 렌더링, 이벤트 처리, Supabase 연동 저장/로드 |
+| `index.html` | 화면 구조 (로그인/회원가입 화면 + 헤더/입력폼/필터바/할 일 목록), Supabase JS SDK 로드 |
+| `style.css` | 카드형 레이아웃, 로그인/회원가입 폼, 카테고리 색상, hover/transition, 반응형 스타일 |
+| `auth.js` | Supabase Auth(`signUp`/`signInWithPassword`/`signOut`) 기반 회원가입/로그인/로그아웃 처리, 로그인 여부에 따라 화면 전환 |
+| `app.js` | 할 일 데이터 관리, 렌더링, 이벤트 처리, 로그인한 사용자 소유의 `todo_tbl` 행만 조회/저장/수정/삭제 |
+
+## 로그인 / 회원가입
+
+- 로그인하지 않은 상태에서는 할 일 목록이 보이지 않고, 로그인/회원가입 화면만 표시됩니다.
+- **회원가입**: 이메일·비밀번호(6자 이상)·비밀번호 확인 입력 후 가입하면 Supabase Auth의 `signUp`이 호출되어 실제 계정이 생성됩니다. 프로젝트에 이메일 인증이 켜져 있으면 가입 직후 로그인 화면으로 전환되며 "이메일 인증 후 로그인해주세요" 안내가 표시되고, 이메일 인증을 완료해야 로그인할 수 있습니다.
+- **로그인**: Supabase Auth의 `signInWithPassword`로 이메일/비밀번호를 검증하며, 성공하면 곧바로 할 일 목록 화면으로 전환됩니다. 로그인 성공 시 `user_tbl`에 `(id, email)`이 upsert되어 프로필 행이 동기화됩니다.
+- **세션 유지**: Supabase Auth 세션이 브라우저에 저장되어, 새로고침해도 로그인 상태가 유지되고 바로 할 일 목록이 보입니다.
+- **로그아웃**: 할 일 목록 화면 우측 상단의 `로그아웃` 버튼을 누르면 Supabase 세션이 종료되고 로그인 화면으로 돌아갑니다.
+- 비밀번호는 Supabase Auth가 서버 측에서 해시하여 관리하며, 클라이언트나 DB에 평문으로 저장되지 않습니다.
 
 ## 사용법
 
@@ -25,11 +35,12 @@
 
 ## 데이터 저장
 
-- Supabase 프로젝트의 `todo_tbl` 테이블에 저장됩니다 (더 이상 `localStorage`를 사용하지 않습니다).
-- 할 일이 추가/수정/삭제/완료 토글될 때마다 Supabase에 즉시 반영되며, 다른 브라우저/기기에서 열어도 동일한 데이터가 보입니다.
-- 테이블 스키마: `id (uuid, PK)`, `text (text)`, `category (text)`, `completed (boolean)`, `created_at (timestamptz)`
-- 클라이언트는 `@supabase/supabase-js` (CDN)로 프로젝트 URL과 anon(publishable) 키를 사용해 REST 호출을 수행합니다. anon 키는 공개되어도 안전하도록 설계된 키이며, 실제 접근 제어는 테이블의 Row Level Security(RLS) 정책으로 관리됩니다.
-- 현재는 개인용 단일 사용자 앱이므로 `anon` 역할에 전체 CRUD를 허용하는 RLS 정책이 적용되어 있습니다. 여러 사용자가 공유하는 환경으로 확장한다면 인증(Auth)과 사용자별 정책을 추가해야 합니다.
+- 인증은 Supabase Auth(`auth.users`)가 담당하고, 앱 데이터는 `user_tbl`과 `todo_tbl` 두 테이블에 1:N 관계로 저장됩니다 (더 이상 `localStorage`를 사용하지 않습니다).
+- **`user_tbl`**: `id (uuid, PK, auth.users.id 참조)`, `email (text)`, `created_at (timestamptz)`. 회원가입/로그인 시 현재 로그인한 사용자 행이 upsert됩니다.
+- **`todo_tbl`**: `id (uuid, PK)`, `user_id (uuid, user_tbl.id 참조)`, `text (text)`, `category (text)`, `completed (boolean)`, `created_at (timestamptz)`. 한 사용자가 여러 개의 할 일을 가지는 1:N 구조입니다.
+- 할 일이 추가/수정/삭제/완료 토글될 때마다 Supabase에 즉시 반영되며, 같은 계정으로 다른 브라우저/기기에서 로그인해도 동일한 데이터가 보입니다.
+- 클라이언트는 `@supabase/supabase-js` (CDN)로 프로젝트 URL과 anon(publishable) 키를 사용해 REST 호출을 수행합니다. anon 키는 공개되어도 안전하도록 설계된 키이며, 실제 접근 제어는 각 테이블의 Row Level Security(RLS) 정책으로 관리됩니다.
+- `user_tbl`/`todo_tbl` 모두 RLS가 활성화되어 있고, `auth.uid()`가 각 행의 소유자(`user_tbl.id` 또는 `todo_tbl.user_id`)와 일치할 때만 조회·추가·수정·삭제가 허용됩니다. 즉 로그인한 사용자는 자기 자신의 할 일만 보고 조작할 수 있습니다.
 
 ## 최종 점검 결과
 
@@ -40,10 +51,9 @@
 - [x] 카테고리 분류 및 필터 버튼 클릭 시 정확한 필터링 + active 스타일
 - [x] 진행률(완료/전체, %)이 정확히 계산되어 텍스트와 프로그레스 바에 반영
 - [x] 새로고침(재로드) 후에도 목록/완료 상태가 그대로 유지
-- [x] 손상된 localStorage 값에도 예외 없이 빈 목록으로 안전하게 처리
 - [x] 외부 프레임워크/빌드 도구 없이 `index.html` 실행만으로 동작
 
 ## 참고
 
 - 최신 Chrome/Edge 기준으로 테스트되었습니다.
-- 브라우저 로컬 저장소를 사용하므로, 다른 브라우저나 시크릿 모드로 열면 데이터가 공유되지 않습니다.
+- 할 일 데이터는 Supabase 계정(로그인) 기준으로 저장되므로, 같은 계정으로 로그인하면 다른 브라우저·기기·시크릿 모드에서도 동일한 목록이 보입니다.
